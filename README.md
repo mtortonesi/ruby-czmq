@@ -48,7 +48,7 @@ in your Gemfile and run:
 ## Examples
 
 You can find some simple examples that demonstrate how to use the ruby-czmq api
-in the [examples directory](https://github.com/mtortonesi/ruby-czmq/examples)
+in the [examples directory](https://github.com/mtortonesi/ruby-czmq/tree/master/examples)
 of this project.
 
 
