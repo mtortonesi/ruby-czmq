@@ -4,15 +4,16 @@ module CZMQ
   class Context
 
     def initialize(opts = {})
-      DEFAULT_OPTS = { io_threads: 1, linger: 0 }
-      opts = DEFAULT_OPTS.merge(args)
+      # TODO: check this code
+      _DEFAULT_OPTS = { io_threads: 1, linger: 0 }
+      opts = _DEFAULT_OPTS.merge(opts)
 
       @zctx = LibCZMQ.zctx_new
       # TODO: check that this is not null
 
       # Setup multiple I/O threads if requested
       if opts[:io_threads].is_a? Numeric and opts[:io_threads] > 1
-        LibCZMQ.zctx_set_io_threads(@zctx, opts[:io_threads])
+        LibCZMQ.zctx_set_iothreads(@zctx, opts[:io_threads])
       end
 
       setup_finalizer
@@ -22,7 +23,7 @@ module CZMQ
       if @zctx
         # Since we explicitly close the zctx, we have to remove the finalizer.
         remove_finalizer
-        LibZMQ.zctx_destroy(@zctx)
+        LibCZMQ.zctx_destroy(@zctx)
         @zctx = nil
       end
     end
@@ -59,11 +60,8 @@ module CZMQ
       # http://www.mikeperham.com/2010/02/24/the-trouble-with-ruby-finalizers/
       def self.close_zctx(zctx)
         Proc.new do
-          zctx_ptr = FFI::MemoryPointer.new(:pointer)
-          zctx_ptr.write_pointer(zctx)
-          LibCZMQ.zctx_destroy(zctx_ptr)
-          # The following code is not needed, as zctx won't be used anymore.
-          # zctx = zctx_ptr.read_pointer
+          LibCZMQ.zctx_destroy(zctx)
+          zctx = nil # Just in case
         end
       end
   end

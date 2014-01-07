@@ -1,13 +1,13 @@
-require 'ffi'
-require 'ruby-cmzq-ffi'
+require 'czmq-ffi'
 
 
 module CZMQ
   class ZSocket
 
     def initialize(zctx, type, opts = {})
+      @zctx = zctx
       @zsocket = LibCZMQ.zsocket_new(zctx, type)
-      # TODO: check that zsocket is not null?
+      # TODO: Maybe check that zsocket is not null?
 
       setup_finalizer
     end
@@ -16,7 +16,7 @@ module CZMQ
       if @zsocket
         # Since we explicitly close the zsocket, we have to remove the finalizer.
         remove_finalizer
-        LibZMQ.zsocket_destroy(@zsocket)
+        LibCZMQ.zsocket_destroy(@zctx, @zsocket)
         @zsocket = nil
       end
     end
@@ -52,40 +52,40 @@ module CZMQ
 
     def type
       raise "Can't read type of a closed ZSocket!" unless @zsocket
-      type_ptr = LibCZMQ.zsocket_type_str(@zsocket)
-      # TODO: check if we need to return a duped string
-      type_ptr.null? ? nil : type_ptr.read_string()
+      LibCZMQ.zsocket_type_str(@zsocket)
     end
 
     def receive_string(*opts)
       if opts.include? :no_wait
-        str_ptr = LibCZMQ.zstr_recv_nowait(@socket)
-        # No need to raise exception if zstr_recv_nowait returns NULL.
-        extract_str(str_ptr)
+        # NOTE: There is no need to raise exception if zstr_recv_nowait returns
+        # NULL. That's a perfectly fine result, meaning that we don't have any
+        # strings in the CZMQ RX buffers.
+        LibCZMQ.zstr_recv_nowait(@zsocket)
       elsif opts.include? :multipart
-        # TODO: call zstr_recvx
+        # TODO: Call zstr_recvx
       else
-        str_ptr = LibCZMQ.zstr_recv(@socket)
-        raise "Can't read string from ZSocket" if str_ptr.null?
-        extract_str(str_ptr)
+        str = LibCZMQ.zstr_recv(@zsocket)
+        # TODO: Do we really need to raise an exception if the string is nil?
+        raise "Can't read string from ZSocket" if str.nil?
+        str
       end
     end
 
     def send_string(str, *opts)
       if opts.include? :more
-        LibCZMQ.zstr_sendm(@socket, str)
+        LibCZMQ.zstr_sendm(@zsocket, str)
         # TODO: check the code returned by zstr_sendm?
       elsif opts.include? :multipart
         # TODO: call zstr_sendx
       else
-        LibCZMQ.zstr_send(@socket, str)
+        LibCZMQ.zstr_send(@zsocket, str)
         # TODO: check the code returned by zstr_send?
       end
     end
 
     # TODO: implement this
     # def sendmem
-    #   raise CZMQException, "Can't sendmem to a closed ZSocket!" unless @zsocket
+    #   raise "Can't sendmem to a closed ZSocket!" unless @zsocket
     # end
 
     private
@@ -98,7 +98,7 @@ module CZMQ
       # In fact, the CZMQ documentation at http://zeromq.org/area:faq explicitly states
       # "It is not safe to share a context or sockets between a parent and its child."
       def setup_finalizer
-        ObjectSpace.define_finalizer(self, self.class.close_zsocket(@zsocket))
+        ObjectSpace.define_finalizer(self, self.class.close_zsocket(@zctx, @zsocket))
       end
 
       def remove_finalizer
@@ -107,29 +107,10 @@ module CZMQ
 
       # Need to make this a class method, or the deallocation won't take place. See:
       # http://www.mikeperham.com/2010/02/24/the-trouble-with-ruby-finalizers/
-      def self.close_zsocket(zsocket)
+      def self.close_zsocket(zctx, zsocket)
         Proc.new do
-          zsocket_ptr = FFI::MemoryPointer.new(:pointer)
-          zsocket_ptr.write_pointer(zsocket)
-          LibCZMQ.zsocket_destroy(zsocket_ptr)
-          # The following code is not needed, as zsocket won't be used anymore.
-          # zsocket = zsocket_ptr.read_pointer
+          LibCZMQ.zsocket_destroy(zctx, zsocket)
         end
-      end
-
-      def extract_str(ffi_str_pointer)
-        # Make sure we don't try to extract a string from a NULL pointer.
-        return nil if ffi_str_pointer.null? || ffi_str_pointer.nil?
-
-        # Read the string pointed by ffi_str_pointer.
-        str = ffi_str_pointer.read_pointer.read_string
-
-        # The read_string method (actually, the str_new C function nested
-        # inside it) makes a deep copy, so we can safely free ffi_str_pointer.
-        ffi_str_pointer.free
-
-        # Return the string we extracted from ffi_str_pointer.
-        str
       end
   end
 end

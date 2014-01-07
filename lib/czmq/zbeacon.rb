@@ -12,6 +12,15 @@ module CZMQ
       setup_finalizer
     end
 
+    def close
+      if @zbeacon
+        # Since we explicitly close the zbeacon, we have to remove the finalizer.
+        remove_finalizer
+        LibCZMQ.zbeacon_destroy(@zbeacon)
+        @zbeacon = nil
+      end
+    end
+
     def hostname
       LibCZMQ.zbeacon_hostname(@zbeacon)
     end
@@ -43,7 +52,7 @@ module CZMQ
       LibCZMQ.zbeacon_unsubscribe(@zbeacon)
     end
 
-    def socket
+    def zsocket
       # TODO: maybe wrap this into a zsocket?
       # NOTE: the value returned by zbeacon_socket should be a ZMQ socket, not
       # a CZMQ zsocket. Check this out.
@@ -63,15 +72,16 @@ module CZMQ
         ObjectSpace.define_finalizer(self, self.class.close_zbeacon(@zbeacon))
       end
 
+      def remove_finalizer
+        ObjectSpace.undefine_finalizer self
+      end
+
       # Need to make this a class method, or the deallocation won't take place. See:
       # http://www.mikeperham.com/2010/02/24/the-trouble-with-ruby-finalizers/
       def self.close_zbeacon(zbeacon)
         Proc.new do
-          zbeacon_ptr = FFI::MemoryPointer.new(:pointer)
-          zbeacon_ptr.write_pointer(zbeacon)
-          LibCZMQ.zbeacon_destroy(zbeacon_ptr)
-          # The following code is not needed, as zbeacon won't be used anymore.
-          # zbeacon = zbeacon_ptr.read_pointer
+          LibCZMQ.zbeacon_destroy(zbeacon)
+          zbeacon = nil # Just in case
         end
       end
   end
