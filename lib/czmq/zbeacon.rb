@@ -1,6 +1,7 @@
 module CZMQ
   class ZBeacon
-    def initialize(port, opts={})
+    def initialize(ctx, port, opts={})
+      @ctx = ctx
       @zbeacon = LibCZMQ.zbeacon_new(port)
 
       # zbeacon_new returns NULL in case of failure
@@ -62,12 +63,11 @@ module CZMQ
       LibCZMQ.zbeacon_unsubscribe(@zbeacon)
     end
 
-    def zsocket
-      # TODO: maybe wrap this into a zsocket?
-      # NOTE: the value returned by zbeacon_socket should be a ZMQ socket, not
-      # a CZMQ zsocket. Check this out.
-      LibCZMQ.zbeacon_socket(@zbeacon)
+    def socket
+      raise "Can't get socket of an uninitialized ZBeacon!" unless @zbeacon
+      ZSocket.new(@ctx, LibCZMQ.zbeacon_socket(@zbeacon))
     end
+
 
     private
 

@@ -1,11 +1,30 @@
 module CZMQ
   class ZPoller
-    def initialize(*zsockets)
-      @zsockets = zsockets
-      @zpoller = @zsockets.map{|zsock| zsock.__peek_zsocket_pointer__ }
+
+    def initialize(zctx, *zobjs)
+      raise ArgumentError, 'Must provide at least one ZSocket!' if zobjs.empty?
+
+      # # Need to save context for ZSocket operations
+      # @zctx = zctx
+      @zsockets = zobjs
+
+      # We need to setup the ZPoller from zsocket pointers, not ZSocket objects
+      zsocks = zobjs.map{|zo| zo.__get_zsocket_pointer__ }
+
+      # Create zpoller by calling zpoller_new
+      first_arg = zsocks.shift
+      if zsocks.empty?
+        # We just need to pass a single argument
+        @zpoller = LibCZMQ.zpoller_new(first_arg)
+      else
+        # We also need to pass additional arguments, using the horrible varargs interface
+        other_args = ([ :pointer ] * zsocks.size).zip(zsocks).flatten
+        @zpoller = LibCZMQ.zpoller_new(first_arg, *other_args)
+      end
 
       setup_finalizer
     end
+
 
     def destroy
       if @zpoller
@@ -16,16 +35,25 @@ module CZMQ
       end
     end
 
+    def add(zsocket)
+      raise "Can't add a ZSocket to an uninitialized ZPoller!" unless @zpoller
+      @zsockets << zsocket
+      LibCZMQ.zpoller_add(@zpoller, zsocket.__peek_zsocket_pointer__)
+    end
+
     def wait(timeout)
       raise "Can't wait on an uninitialized ZPoller!" unless @zpoller
+      # TODO: should we return a newly created ZSocket or an existing one?
       zsockptr = LibCZMQ.zpoller_wait(@zpoller, timeout)
-      zsockets.select{|zsock| zsock.__peek_zsocket_pointer__ == zsockptr }
+      yield zsockets.select{|zsock| zsock.__peek_zsocket_pointer__ == zsockptr }
     end
+
 
     def expired?
       raise "Can't check if an uninitialized ZPoller is expired!" unless @zpoller
       LibCZMQ.zpoller_expired(@zpoller)
     end
+
 
     def terminated?
       raise "Can't check if an uninitialized ZPoller is terminated!" unless @zpoller

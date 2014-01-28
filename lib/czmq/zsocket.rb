@@ -4,10 +4,15 @@ require 'czmq-ffi'
 module CZMQ
   class ZSocket
 
-    def initialize(zctx, type, opts = {})
+    def initialize(zctx, obj, opts = {})
       @zctx = zctx
-      @zsocket = LibCZMQ.zsocket_new(zctx, type)
-      # TODO: Maybe check that zsocket is not null?
+
+      if obj.is_a? FFI::Pointer
+        @zsocket = obj
+      else
+        @zsocket = LibCZMQ.zsocket_new(zctx, type)
+        # TODO: Maybe check that zsocket is not null?
+      end
 
       setup_finalizer
     end
@@ -104,6 +109,10 @@ module CZMQ
     # def sendmem
     #   raise "Can't sendmem to a closed ZSocket!" unless @zsocket
     # end
+
+    def __get_zsocket_pointer__
+      @zsocket
+    end
 
     private
 
