@@ -1,3 +1,5 @@
+require 'ffi'
+
 module CZMQ
   class ZFrame
     def initialize(obj=nil)

@@ -4,7 +4,7 @@ module CZMQ
       @zbeacon = LibCZMQ.zbeacon_new(port)
 
       # zbeacon_new returns NULL in case of failure
-      raise "Could not create ZBeacon" if @zbeacon.null?
+      raise 'Could not create ZBeacon' if @zbeacon.null?
 
       # Setup no_echo option if requested
       if opts[:no_echo]
@@ -48,21 +48,17 @@ module CZMQ
     end
 
     def silence
-      raise "Can't silenc a closed ZBeacon!" unless @zbeacon
+      raise "Can't silence an uninitialized ZBeacon!" unless @zbeacon
       LibCZMQ.zbeacon_silence(@zbeacon)
     end
 
     def subscribe(match=nil)
-      if match
-        # TODO: transform match data into a bytes array
-        LibCZMQ.zbeacon_subscribe(@zbeacon, bytes, size)
-      else
-        # No match provided. Just pass NULL and 0 to zbeacon_subscribe.
-        LibCZMQ.zbeacon_subscribe(@zbeacon, nil, 0)
-      end
+      raise "Can't subscribe to an uninitialized ZBeacon!" unless @zbeacon
+      LibCZMQ.zbeacon_subscribe(@zbeacon, match)
     end
 
     def unsubscribe
+      raise "Can't unsubscribe from an uninitialized ZBeacon!" unless @zbeacon
       LibCZMQ.zbeacon_unsubscribe(@zbeacon)
     end
 
