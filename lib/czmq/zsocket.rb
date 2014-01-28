@@ -61,14 +61,23 @@ module CZMQ
         # NULL. That's a perfectly fine result, meaning that we don't have any
         # strings in the CZMQ RX buffers.
         LibCZMQ.zstr_recv_nowait(@zsocket)
-      elsif opts.include? :multipart
-        # TODO: Call zstr_recvx
       else
         str = LibCZMQ.zstr_recv(@zsocket)
         # TODO: Do we really need to raise an exception if the string is nil?
         raise "Can't read string from ZSocket" if str.nil?
         str
       end
+    end
+
+    def receive_strings
+      strings = []
+      zmsg = self.receive_message
+      str = zmsg.pop_string
+      while str
+        strings << str
+        str = zmsg.pop_string
+      end
+      strings
     end
 
     def send_string(str, *opts)
@@ -81,6 +90,14 @@ module CZMQ
         LibCZMQ.zstr_send(@zsocket, str)
         # TODO: check the code returned by zstr_send?
       end
+    end
+
+    def receive_message
+      ZMessage.new(LibCZMQ.zmsg_recv(@zsocket))
+    end
+
+    def send_message(zmsg)
+      zmsg.__send_over(@zsocket)
     end
 
     # TODO: implement this

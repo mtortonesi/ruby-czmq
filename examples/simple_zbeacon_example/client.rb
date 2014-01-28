@@ -1,10 +1,15 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'bundler/setup'
+
 require 'czmq'
 
 ctx = CZMQ::Context.new
 if ctx
   zsocket = ctx.create_zsocket(CZMQ::REQ)
   zsocket.connect('tcp://localhost:8000')
-  zsocket.send_string('request')
+  zsocket.send_string('richiesta')
   puts zsocket.receive_string
   zsocket.close
   ctx.close

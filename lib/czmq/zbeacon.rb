@@ -2,39 +2,53 @@ module CZMQ
   class ZBeacon
     def initialize(port, opts={})
       @zbeacon = LibCZMQ.zbeacon_new(port)
-      # TODO: check result?
+
+      # zbeacon_new returns NULL in case of failure
+      raise "Could not create ZBeacon" if @zbeacon.null?
 
       # Setup no_echo option if requested
       if opts[:no_echo]
         LibCZMQ.zbeacon_no_echo(@zbeacon)
       end
 
+      # Setup the finalizer to free the memory allocated by the CZMQ library
       setup_finalizer
     end
 
     def close
       if @zbeacon
-        # Since we explicitly close the zbeacon, we have to remove the finalizer.
+        # Since we explicitly close the ZBeacon, we have to remove the finalizer.
         remove_finalizer
+
+        # Destroy the ZBeacon
         LibCZMQ.zbeacon_destroy(@zbeacon)
+
+        # Unset @zbeacon
         @zbeacon = nil
       end
     end
 
     def hostname
+      raise "Can't get the hostname of a closed ZBeacon!" unless @zbeacon
       LibCZMQ.zbeacon_hostname(@zbeacon)
     end
 
     def set_interval(interval)
+      raise "Can't set the advertisement interval of a closed ZBeacon!" unless @zbeacon
       LibCZMQ.zbeacon_set_interval(@zbeacon, interval)
     end
 
     def publish(data)
-      # TODO: transform data into a bytes array
-      LibCZMQ.zbeacon_publish(@zbeacon, bytes, size)
+      raise "Can't set the advertisement interval of a closed ZBeacon!" unless @zbeacon
+
+      # Transform data into a bytes array
+      bytes = to_bytearray(data)
+
+      LibCZMQ.zbeacon_publish(@zbeacon, bytes, bytes.size)
     end
 
     def silence
+      raise "Can't silenc a closed ZBeacon!" unless @zbeacon
       LibCZMQ.zbeacon_silence(@zbeacon)
     end
 
@@ -82,6 +96,19 @@ module CZMQ
         Proc.new do
           LibCZMQ.zbeacon_destroy(zbeacon)
           zbeacon = nil # Just in case
+        end
+      end
+
+      def to_bytearray
+        bytes = nil
+        if data.is_a? String
+          # String to byte array conversion using the default UTF-8 encoding
+          bytes = data.encode("UTF-8").bytes.to_a
+        elsif data.respond_to? :to_a and !data.is_a? Array
+          bytes = data
+        else
+          raise "Don't know how to deal with data" unless data.is_a? Array
+          bytes = data
         end
       end
   end

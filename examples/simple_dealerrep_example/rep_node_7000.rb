@@ -2,10 +2,12 @@ require 'czmq'
 
 ctx = CZMQ::Context.new
 if ctx
-  zsocket = ctx.create_zsocket(CZMQ::REQ)
-  zsocket.connect('tcp://localhost:8000')
-  zsocket.send_string('request')
+  zsocket = ctx.create_zsocket(CZMQ::REP)
+  zsocket.bind('tcp://*:7000')
+
   puts zsocket.receive_string
+  zsocket.send_string('reply')
+
   zsocket.close
   ctx.close
 else
