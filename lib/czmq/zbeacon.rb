@@ -40,12 +40,12 @@ module CZMQ
     end
 
     def publish(data)
-      raise "Can't set the advertisement interval of a closed ZBeacon!" unless @zbeacon
+      raise "Can't publish advertisements on a closed ZBeacon!" unless @zbeacon
 
       # Transform data into a bytes array
       bytes = to_bytearray(data)
 
-      LibCZMQ.zbeacon_publish(@zbeacon, bytes, bytes.size)
+      LibCZMQ.zbeacon_publish(@zbeacon, bytes)
     end
 
     def silence
@@ -95,17 +95,18 @@ module CZMQ
         end
       end
 
-      def to_bytearray
+      def to_bytearray(data)
         bytes = nil
         if data.is_a? String
           # String to byte array conversion using the default UTF-8 encoding
+          # bytes = data.bytes.to_a
           bytes = data.encode("UTF-8").bytes.to_a
         elsif data.respond_to? :to_a and !data.is_a? Array
           bytes = data
         else
           raise "Don't know how to deal with data" unless data.is_a? Array
-          bytes = data
         end
+        bytes
       end
   end
 end

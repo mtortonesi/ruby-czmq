@@ -10,7 +10,7 @@ module CZMQ
       if obj.is_a? FFI::Pointer
         @zsocket = obj
       else
-        @zsocket = LibCZMQ.zsocket_new(zctx, type)
+        @zsocket = LibCZMQ.zsocket_new(zctx, obj)
         # TODO: Maybe check that zsocket is not null?
       end
 
@@ -113,6 +113,15 @@ module CZMQ
     def __get_zsocket_pointer__
       @zsocket
     end
+
+    alias_method :to_ptr, :__get_zsocket_pointer__
+
+    def to_pollitem(polling_type=CZMQ::POLLIN)
+      raise "Can't convert an uninitialized/closed ZSocket to a pollitem!" unless @zsocket
+      # TODO: check what to do in case we have a pollitem with a different poll type
+      LibCZMQ.create_pollitem(socket: @zsocket, revents: polling_type)
+    end
+
 
     private
 

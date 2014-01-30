@@ -35,17 +35,12 @@ module CZMQ
       end
     end
 
-    def add(zsocket)
-      raise "Can't add a ZSocket to an uninitialized ZPoller!" unless @zpoller
-      @zsockets << zsocket
-      LibCZMQ.zpoller_add(@zpoller, zsocket.__peek_zsocket_pointer__)
-    end
 
     def wait(timeout)
       raise "Can't wait on an uninitialized ZPoller!" unless @zpoller
       # TODO: should we return a newly created ZSocket or an existing one?
       zsockptr = LibCZMQ.zpoller_wait(@zpoller, timeout)
-      yield zsockets.select{|zsock| zsock.__peek_zsocket_pointer__ == zsockptr }
+      yield zsockets.select{|zsock| zsock.__get_zsocket_pointer__ == zsockptr }
     end
 
 
