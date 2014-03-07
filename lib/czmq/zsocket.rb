@@ -77,10 +77,10 @@ module CZMQ
     def receive_strings
       strings = []
       zmsg = self.receive_message
-      str = zmsg.pop_string
+      str = zmsg.pop(:string)
       while str
         strings << str
-        str = zmsg.pop_string
+        str = zmsg.pop(:string)
       end
       strings
     end
