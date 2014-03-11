@@ -1,17 +1,22 @@
 module CZMQ
   class ZLoop
-    def initialize
-      @zloop = LibCZMQ.zloop_new
+    def initialize(zloop=nil)
+      @zloop = zloop || LibCZMQ.zloop_new
 
-      setup_finalizer
+      # LibCZMQ.zloop_set_verbose(@zloop, true)
+
+      unless zloop
+        setup_finalizer
+      end
     end
 
     def destroy
       if @zloop
         # Since we explicitly close the zloop, we have to remove the finalizer.
         remove_finalizer
-        LibCZMQ.zloop_destroy(@zloop)
+        rc = LibCZMQ.zloop_destroy(@zloop)
         raise 'Error!' unless @zloop.nil?
+        rc
       end
     end
 
@@ -24,13 +29,17 @@ module CZMQ
       raise 'Trying to add a poller to an unitialized ZLoop!' if @zloop.nil?
       raise ArgumentError, 'You need to provide a block or a proc/lambda!' unless block_given? or func.responds_to :call
 
-      # need to preserve this callback from the garbage collector
-      @callback = block_given? ?
-        LibCZMQ.create_zloop_callback(Proc.new(block)) :
-        LibCZMQ.create_zloop_callback(func)
+      the_proc = block_given? ? block.to_proc : func
 
-      puts "@callback: #{@callback.inspect}"
-      puts "poll_item: #{poll_item.inspect}"
+      # need to preserve this callback from the garbage collector
+      @callback = LibCZMQ.create_zloop_callback(
+        lambda do |zloopbuf, zpollitembuf, arg|
+          zpollitem = LibCZMQ::ZPollItem.new(zpollitembuf)
+          zlp = ZLoop.new(zloopbuf)
+          zsk = ZSocket.new(nil, zpollitem[:socket])
+          the_proc.call(zlp, zsk)
+        end
+      )
 
       LibCZMQ.zloop_poller(@zloop, poll_item, @callback, nil)
     end
@@ -39,15 +48,16 @@ module CZMQ
 
     def poller_end(poll_item)
       LibCZMQ.zloop_poller_end(@zloop, poll_item)
+      @callback = nil
     end
 
     alias_method :remove_poller, :poller_end
 
-
-    # def stop
-    #   raise 'Trying to stop an unitialized ZLoop!' if @zloop.nil?
-    #   LibCZMQ.zloop_stop(@zloop)
-    # end
+    def add_timer(delay, times, &block)
+      if block
+        LibCZMQ.zloop_timer(@zloop, delay, times, block.to_proc, nil)
+      end
+    end
 
 
     private

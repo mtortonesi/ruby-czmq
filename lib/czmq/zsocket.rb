@@ -119,7 +119,7 @@ module CZMQ
     def to_pollitem(polling_type=CZMQ::POLLIN)
       raise "Can't convert an uninitialized/closed ZSocket to a pollitem!" unless @zsocket
       # TODO: check what to do in case we have a pollitem with a different poll type
-      LibCZMQ.create_pollitem(socket: @zsocket, revents: polling_type)
+      LibCZMQ.create_pollitem(socket: @zsocket, events: polling_type)
     end
 
 
