@@ -5,14 +5,15 @@ require 'bundler/setup'
 
 require 'czmq'
 
-ctx = CZMQ::Context.new
-if ctx
+begin
+  ctx = CZMQ::Context.new
   zsocket = ctx.create_zsocket(CZMQ::REQ)
   zsocket.connect('tcp://localhost:8000')
+  puts 'sending string'
   zsocket.send_string('request')
   puts zsocket.receive_string
   zsocket.close
   ctx.close
-else
-  STDERR.puts 'Context allocation failed.'
+rescue => e
+  STDERR.puts e.backtrace
 end
