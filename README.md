@@ -32,12 +32,21 @@ functions of ffi-rzmq and rbzmq with significantly less code.
 
 ## Installation
 
-I have not released either ruby-czmq or ruby-czmq-ffi on RubyGems, yet. For the
-moment, if you want to try ruby-czmq just place these lines:
+### Stable version
+
+You can get the stable version of ruby-czmq by installing the czmq gem from
+RubyGems:
+
+    gem install czmq
+
+### Development version
+
+If you want to try the development version of ruby-czmq, instead, just place
+these lines:
 
 ```ruby
-gem 'ruby-czmq-ffi', git: 'https://github.com/mtortonesi/ruby-czmq-ffi'
-gem 'ruby-czmq', git: 'https://github.com/mtortonesi/ruby-czmq-ffi'
+gem 'czmq-ffi', git: 'https://github.com/mtortonesi/ruby-czmq-ffi.git'
+gem 'czmq', git: 'https://github.com/mtortonesi/ruby-czmq.git'
 ```
 
 in your Gemfile and run:
