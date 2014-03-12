@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'czmq/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'ruby-czmq'
+  spec.name          = 'czmq'
   spec.version       = CZMQ::VERSION
   spec.authors       = ['Mauro Tortonesi']
   spec.email         = ['mauro.tortonesi@unife.it']
@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ['lib']
 
-  spec.add_runtime_dependency 'ruby-czmq-ffi'
+  spec.add_runtime_dependency 'czmq-ffi'
   spec.add_development_dependency 'bundler', '~> 1.3'
   spec.add_development_dependency 'rake'
 end
